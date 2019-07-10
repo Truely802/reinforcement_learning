@@ -26,9 +26,9 @@ wh_vis_map = [
 ]
 
 
-def init_shelf(coordinates, random=True):
+def init_shelf(random=True):
     shelf = wo.Shelf(
-        coordinates=coordinates,
+        # coordinates=coordinates,
         max_volume=100,
         max_weight=100
     )
@@ -54,16 +54,16 @@ def init_wh_map(vis_map):
         wo_row = []
         for j, sprite in enumerate(row):
             if sprite == '+':
-                wo_unit = wo.Wall(coordinates=(i, j))
+                wo_unit = wo.Wall()  # (coordinates=(i, j))
                 wo_row.append(wo_unit)
             elif sprite == '.':
-                wo_unit = wo.SimpleFloor(coordinates=(i, j))
+                wo_unit = wo.SimpleFloor()  # (coordinates=(i, j))
                 wo_row.append(wo_unit)
             elif sprite == '#':
-                wo_unit = init_shelf(coordinates=(i, j))
+                wo_unit = init_shelf()  # (coordinates=(i, j))
                 wo_row.append(wo_unit)
             elif sprite == '$':
-                wo_unit = wo.PickPoint(coordinates=(i, j))
+                wo_unit = wo.PickPoint()  # (coordinates=(i, j))
                 wo_row.append(wo_unit)
             else:
                 print('Wrong sprite!')
