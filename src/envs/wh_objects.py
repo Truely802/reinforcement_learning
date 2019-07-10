@@ -118,3 +118,35 @@ class Agent(object):
     def inspect_shelf(self):
         shelf = self._find_shelf()
         return shelf.inspect()
+
+
+class PickPoint(Shelf):
+
+    def __init__(self, coordinates, max_volume, max_weight):
+        super().__init__(coordinates, max_volume, max_weight)
+        self.origin = "pickpoint"
+        self.sprite = "$"
+        self.passable = False
+
+    def put_product(self, product):
+        return 1
+
+    def remove_product(self, product_name):
+        return 0
+
+    def inspect(self):
+        return 0
+
+class SimpleFloor(object):
+
+    def __init__(self, coordinates):
+        self.coordinates = coordinates
+        self.passable = True
+        self.sprite = "."
+
+class Wall(object):
+
+    def __init__(self, coordinates):
+        self.coordinates = coordinates
+        self.passable = False
+        self.sprite = "+"
