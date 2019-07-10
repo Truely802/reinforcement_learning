@@ -1,21 +1,18 @@
 class Product(object):
-    def __init__(self, name, weight, volume, manufacturer, price):  # , count=1):
+    def __init__(self, name, weight, volume, manufacturer, price):
         self.name = name
         self.weight = weight
         self.volume = volume
         self.manufacturer = manufacturer
         self.price = price
-        # self.count = count
 
 
 class Shelf(object):
 
-    def __init__(self, coordinates, max_volume, max_weight):  # , max_floors):
-        self.coordinates = coordinates
+    def __init__(self, max_volume, max_weight):
+        # self.coordinates = coordinates
         self.max_volume = max_volume  # maximum volume in liters per 1 section
         self.max_weight = max_weight  # maximum weight in kilos
-        # self.n_sections = n_sections  # number of sections in length
-        # self.max_floors = max_floors  # maximum floors on shelf
         self.products = dict()
         self.free_volume = max_volume
         self.available_load = max_weight
@@ -65,13 +62,13 @@ class Agent(object):
 
     def move(self, map_obj, to='u'):
         if to == 'u':
-            dest = (self.coordinates[0], self.coordinates[1] + 1)
-        elif to == 'd':
-            dest = (self.coordinates[0], self.coordinates[1] - 1)
-        elif to == 'l':
             dest = (self.coordinates[0] - 1, self.coordinates[1])
-        elif to == 'r':
+        elif to == 'd':
             dest = (self.coordinates[0] + 1, self.coordinates[1])
+        elif to == 'l':
+            dest = (self.coordinates[0], self.coordinates[1] - 1)
+        elif to == 'r':
+            dest = (self.coordinates[0], self.coordinates[1] + 1)
         else:
             print('Wrong destination code.')
             return 0
@@ -100,18 +97,27 @@ class Agent(object):
 
     def put_product(self, product_name, map_obj):
         shelf = self._find_shelf(map_obj)
+        if shelf == 0:
+            print('You\'ve broken', self.inventory[product_name]['product'].name)
+            self.free_volume -= self.inventory[product_name]['product'].volume
+            self.available_load -= self.inventory[product_name]['product'].weight
+            self.inventory[product_name]['count'] -= 1
+            return -1 * self.inventory[product_name]['product'].price
         if product_name not in self.inventory or self.inventory[product_name]['count'] == 0:
             print('No such a product.')
             return 0
-        self.free_volume -= self.products[product_name]['product'].volume
-        self.available_load -= self.products[product_name]['product'].weight
+        self.free_volume -= self.inventory[product_name]['product'].volume
+        self.available_load -= self.inventory[product_name]['product'].weight
         self.inventory[product_name]['count'] -= 1
         product = self.inventory[product_name]['product']
         response = shelf.put_product(product)
         return response
 
-    def take_product(self, product_name):
-        shelf = self._find_shelf()
+    def take_product(self, product_name, map_obj):
+        shelf = self._find_shelf(map_obj)
+        if shelf == 0:
+            print('No shelf here')
+            return 0
         product = shelf.remove_product(product_name)
         if product == 0:
             return 0
@@ -132,8 +138,8 @@ class Agent(object):
 
 class PickPoint(Shelf):
 
-    def __init__(self, coordinates):
-        super().__init__(coordinates, max_volume=None, max_weight=None)
+    def __init__(self):
+        super().__init__(max_volume=None, max_weight=None)
         self.origin = "pickpoint"
         self.sprite = "$"
         self.passable = False
@@ -150,8 +156,8 @@ class PickPoint(Shelf):
 
 class SimpleFloor(object):
 
-    def __init__(self, coordinates):
-        self.coordinates = coordinates
+    def __init__(self):
+        # self.coordinates = coordinates
         self.passable = True
         self.origin = "floor"
         self.sprite = "."
@@ -159,8 +165,8 @@ class SimpleFloor(object):
 
 class Wall(object):
 
-    def __init__(self, coordinates):
-        self.coordinates = coordinates
+    def __init__(self):
+        # self.coordinates = coordinates
         self.passable = False
         self.origin = "wall"
         self.sprite = "+"
