@@ -68,7 +68,7 @@ def sim_loop():
                 score -= 10
             else:
                 print(r)
-        elif action == 'w':
+        elif action == 'r':
             print('Waiting...')
         score -= 10
         render_map(map_obj, agent_obj)
