@@ -3,7 +3,6 @@ from src.envs import wh_objects as wo
 
 import os
 
-
 def render_map(map_obj, agent_obj):
     for i, row in enumerate(map_obj):
         to_print = list()
