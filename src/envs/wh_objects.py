@@ -122,7 +122,7 @@ class Agent(object):
         product = shelf.remove_product(product_name)
         if product == 0:
             return 0
-        if self.free_volume < product.volume and self.available_load < product.weight:
+        if self.free_volume < product.volume or self.available_load < product.weight:
             if not self.silent: print('No more space in inventory')
             self.put_product(product_name=product.name, map_obj=map_obj)
             return 0
