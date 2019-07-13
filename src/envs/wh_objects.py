@@ -130,7 +130,7 @@ class Agent(object):
         self.free_volume -= product.volume
         self.available_load -= product.weight
         self.inventory[product.name]['count'] += 1
-        return 1
+        return 2
 
     def inspect_shelf(self, map_obj):
         shelf = self._find_shelf(map_obj)

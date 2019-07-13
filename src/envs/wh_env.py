@@ -48,6 +48,7 @@ class WarehouseEnv(gym.Env):
         )
 
         self.reward_policy = {
+            2: 50,
             1: 0,
             0: -10,
             10: 500,

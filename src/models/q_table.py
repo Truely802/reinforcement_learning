@@ -4,6 +4,7 @@ from tqdm import tqdm
 import os
 from IPython.display import clear_output
 from time import sleep
+import pickle
 
 
 class QTable(object):
@@ -30,7 +31,6 @@ class QTable(object):
             self.stats['epochs'] = 0
             self.stats['penalties'] = 0
             self.stats['reward'] = 0
-            # epochs, penalties, reward, = 0, 0, 0
             done = False
 
             while not done:
@@ -52,6 +52,9 @@ class QTable(object):
                 if reward < -10:
                     self.stats['penalties'] += 1
 
+                if reward > 0:
+                    self.stats['reward'] += 1
+
                 state = next_state
                 self.stats['epochs'] += 1
         if self.verbose:
@@ -63,7 +66,7 @@ class QTable(object):
         for _ in range(episodes):
             state = self.env.reset()
             state = self._encode_state(state)
-            epochs, penalties, reward = 0, 0, 0
+            epochs, penalties, rewards = 0, 0, 0
 
             done = False
 
@@ -73,6 +76,8 @@ class QTable(object):
                 state = self._encode_state(state)
                 if reward < -10:
                     penalties += 1
+                if reward > 0:
+                    rewards += 1
 
                 epochs += 1
 
@@ -82,14 +87,16 @@ class QTable(object):
             print(f"Results after {episodes} episodes:")
             print(f"Average timesteps per episode: {total_epochs / episodes}")
             print(f"Average penalties per episode: {total_penalties / episodes}")
+            print(f"Average rewards per episode: {rewards / episodes}")
 
         return {
             'avg_timesteps': total_epochs / episodes,
-            'avg_penalties': total_penalties / episodes
+            'avg_penalties': total_penalties / episodes,
+            'avg_rewards': rewards / episodes
         }
 
     def operate(self):
-        epochs, penalties, reward = 0, 0, 0
+        epochs, penalties, rewards = 0, 0, 0
 
         done = False
 
@@ -114,6 +121,7 @@ class QTable(object):
         if self.verbose:
             print(f"Timesteps taken: {epochs}")
             print(f"Penalties incurred: {penalties}")
+            print(f"Rewards incurred: {rewards}")
 
     def show_operation(self, sleep_time=.1):
         for i, frame in enumerate(self.frames):
@@ -125,3 +133,15 @@ class QTable(object):
             print(f"Action: {frame['action']}")
             print(f"Reward: {frame['reward']}")
             sleep(sleep_time)
+
+    def save_model(self, path):
+        with open(path + '.pickle', 'wb') as f:
+            pickle.dump(self.q_table, f)
+            if self.verbose:
+                print('Model saved.')
+
+    def load_model(self, path):
+        with open(path, 'rb') as f:
+            self.q_table = pickle.load(f)
+            if self.verbose:
+                print('Model loaded.')
