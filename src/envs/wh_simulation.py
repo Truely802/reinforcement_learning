@@ -25,11 +25,11 @@ def sim_loop():
         'a': lambda x, y: x.move(to='l', map_obj=y),
         's': lambda x, y: x.move(to='d', map_obj=y),
         'd': lambda x, y: x.move(to='r', map_obj=y),
-        'q': 'break_loop',
         't': lambda x, y: x.take_product(product_name='MacBookPro', map_obj=y),
         'g': lambda x, y: x.put_product(product_name='MacBookPro', map_obj=y),
         'i': lambda x, y: x.inspect_shelf(map_obj=y),
         'r': lambda x, _: x.wait(),
+        'q': 'break_loop',
     }
 
     reward_policy = {

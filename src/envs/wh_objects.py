@@ -9,8 +9,7 @@ class Product(object):
 
 class Shelf(object):
 
-    def __init__(self, max_volume, max_weight):
-        # self.coordinates = coordinates
+    def __init__(self, max_volume, max_weight, silent=True):
         self.max_volume = max_volume  # maximum volume in liters per 1 section
         self.max_weight = max_weight  # maximum weight in kilos
         self.products = dict()
@@ -19,10 +18,11 @@ class Shelf(object):
         self.origin = "shelf"
         self.sprite = "#"
         self.passable = False
+        self.silent = silent  # silent mode
 
     def put_product(self, product):
         if self.free_volume < product.volume and self.available_load < product.weight:
-            print('The shelf is overburden.')
+            if not self.silent: print('The shelf is overburden.')
             return 0
         self.products[product.name] = self.products.get(product.name, {'product': product,  'count': 0})
         self.free_volume -= product.volume
@@ -32,7 +32,7 @@ class Shelf(object):
 
     def remove_product(self, product_name):
         if product_name not in self.products or self.products[product_name]['count'] == 0:
-            print('No such a product.')
+            if not self.silent: print('No such a product.')
             return 0
         self.free_volume += self.products[product_name]['product'].volume
         self.available_load += self.products[product_name]['product'].weight
@@ -41,14 +41,14 @@ class Shelf(object):
 
     def inspect(self):
         if len(self.products) == 0:
-            print('The shelf is empty.')
+            if not self.silent: print('The shelf is empty.')
             return 0
         return sorted([(k, v['count']) for (k, v) in self.products.items()], reverse=True, key=lambda x: x[1])
 
 
 class Agent(object):
 
-    def __init__(self, name='Bill', max_volume=30, max_weight=30, coordinates=(1,1)):
+    def __init__(self, name='Bill', max_volume=30, max_weight=30, coordinates=(1,1), silent=True):
         self.name = name
         self.coordinates = coordinates
         self.max_volume = max_volume
@@ -59,6 +59,7 @@ class Agent(object):
         self.origin = "agent"
         self.sprite = "X"
         self.passable = False
+        self.silent = silent  # silent mode
 
     def move(self, map_obj, to='u'):
         if to == 'u':
@@ -70,11 +71,11 @@ class Agent(object):
         elif to == 'r':
             dest = (self.coordinates[0], self.coordinates[1] + 1)
         else:
-            print('Wrong destination code.')
+            if not self.silent: print('Wrong destination code.')
             return 0
 
         if not map_obj[dest[0]][dest[1]].passable:
-            print("Can't move here.")
+            if not self.silent: print("Can't move here.")
             return 0
         self.coordinates = dest
         return 1
@@ -97,15 +98,15 @@ class Agent(object):
 
     def put_product(self, product_name, map_obj):
         shelf = self._find_shelf(map_obj)
+        if product_name not in self.inventory or self.inventory[product_name]['count'] == 0:
+            if not self.silent: print('No such a product.')
+            return 0
         if shelf == 0:
-            print('You\'ve broken', self.inventory[product_name]['product'].name)
+            if not self.silent: print('You\'ve broken', self.inventory[product_name]['product'].name)
             self.free_volume -= self.inventory[product_name]['product'].volume
             self.available_load -= self.inventory[product_name]['product'].weight
             self.inventory[product_name]['count'] -= 1
             return -1 * self.inventory[product_name]['product'].price
-        if product_name not in self.inventory or self.inventory[product_name]['count'] == 0:
-            print('No such a product.')
-            return 0
         self.free_volume -= self.inventory[product_name]['product'].volume
         self.available_load -= self.inventory[product_name]['product'].weight
         self.inventory[product_name]['count'] -= 1
@@ -116,24 +117,26 @@ class Agent(object):
     def take_product(self, product_name, map_obj):
         shelf = self._find_shelf(map_obj)
         if shelf == 0:
-            print('No shelf here')
+            if not self.silent: print('No shelf here')
             return 0
         product = shelf.remove_product(product_name)
         if product == 0:
             return 0
-        if self.free_volume < product.volume and self.available_load < product.weight:
-            print('No more space in inventory')
-            self.put_product(product_name=product.name)
+        if self.free_volume < product.volume or self.available_load < product.weight:
+            if not self.silent: print('No more space in inventory')
+            self.put_product(product_name=product.name, map_obj=map_obj)
             return 0
         self.inventory[product.name] = self.inventory.get(product.name, {'product': product, 'count': 0})
         self.free_volume -= product.volume
         self.available_load -= product.weight
         self.inventory[product.name]['count'] += 1
-        return 1
+        return 2
 
     def inspect_shelf(self, map_obj):
         shelf = self._find_shelf(map_obj)
-        return shelf.inspect()
+        if not isinstance(shelf, int):
+            return shelf.inspect()
+        return 0
 
 
 class PickPoint(Shelf):
@@ -157,7 +160,6 @@ class PickPoint(Shelf):
 class SimpleFloor(object):
 
     def __init__(self):
-        # self.coordinates = coordinates
         self.passable = True
         self.origin = "floor"
         self.sprite = "."
@@ -166,7 +168,6 @@ class SimpleFloor(object):
 class Wall(object):
 
     def __init__(self):
-        # self.coordinates = coordinates
         self.passable = False
         self.origin = "wall"
         self.sprite = "+"

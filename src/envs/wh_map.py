@@ -26,11 +26,12 @@ wh_vis_map = [
 ]
 
 
-def init_shelf(random=True):
+def init_shelf(random=True, silent=True):
     shelf = wo.Shelf(
         # coordinates=coordinates,
         max_volume=100,
-        max_weight=100
+        max_weight=100,
+        silent=silent
     )
     if random:
         num = np.random.randint(1, 6)
@@ -48,7 +49,7 @@ def init_shelf(random=True):
     return shelf
 
 
-def init_wh_map(vis_map):
+def init_wh_map(vis_map, random=True, silent=True):
     wo_map = []
     for i, row in enumerate(vis_map):
         wo_row = []
@@ -60,7 +61,7 @@ def init_wh_map(vis_map):
                 wo_unit = wo.SimpleFloor()  # (coordinates=(i, j))
                 wo_row.append(wo_unit)
             elif sprite == '#':
-                wo_unit = init_shelf()  # (coordinates=(i, j))
+                wo_unit = init_shelf(silent=silent, random=random)  # (coordinates=(i, j))
                 wo_row.append(wo_unit)
             elif sprite == '$':
                 wo_unit = wo.PickPoint()  # (coordinates=(i, j))
