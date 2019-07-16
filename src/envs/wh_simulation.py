@@ -1,7 +1,9 @@
 from src.envs import wh_map as wm
 from src.envs import wh_objects as wo
+from src.utils import config as co
 
 import os
+
 
 def render_map(map_obj, agent_obj):
     for i, row in enumerate(map_obj):
@@ -15,9 +17,10 @@ def render_map(map_obj, agent_obj):
 
 
 def sim_loop():
-    map_obj = wm.init_wh_map(wm.wh_vis_map, max_weight=200, max_volume=100)
+    map_obj = wm.init_wh_map(wm.wh_vis_map, max_weight=200, max_volume=100, path_to_catalog=co.PATH_TO_CATALOG)
     agent_obj = wo.Agent(
-        coordinates=(18, 9)
+        coordinates=(18, 9),
+        path_to_catalog=co.PATH_TO_CATALOG
     )
 
     actions = {
@@ -25,14 +28,17 @@ def sim_loop():
         'a': lambda x, y: x.move(to='l', map_obj=y),
         's': lambda x, y: x.move(to='d', map_obj=y),
         'd': lambda x, y: x.move(to='r', map_obj=y),
-        't': lambda x, y: x.take_product(product_name='MacBookPro', map_obj=y),
-        'g': lambda x, y: x.put_product(product_name='MacBookPro', map_obj=y),
+        # 't': lambda x, y: x.take_product(product_name='MacBookPro', map_obj=y),
+        't': lambda x, y: x.take_product(map_obj=y),
+        # 'g': lambda x, y: x.put_product(product_name='MacBookPro', map_obj=y),
+        'g': lambda x, y: x.deliver_products(map_obj=y),
         'i': lambda x, y: x.inspect_shelf(map_obj=y),
         'r': lambda x, _: x.wait(),
         'q': 'break_loop',
     }
 
     reward_policy = {
+        2: 50,
         1: 0,
         0: -10,
         10: 500,
@@ -44,7 +50,7 @@ def sim_loop():
     render_map(map_obj, agent_obj)
     print(f'Score: {score}')
     while True:
-
+        agent_obj.order_list()
         while True:
             action = input()
             if action in actions:
@@ -60,12 +66,16 @@ def sim_loop():
             print(responce)
         elif responce in reward_policy:
             score += reward_policy[responce]
+        elif responce > 0 and responce % 10 == 0:
+            for _ in range(responce / 10):
+                score += reward_policy[responce]
         else:
             score += responce
 
         score -= 10
         render_map(map_obj, agent_obj)
         print(f'Score: {score}')
+        print(agent_obj.order_list)
 
 
 if __name__ == '__main__':

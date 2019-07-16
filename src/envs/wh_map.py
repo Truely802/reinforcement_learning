@@ -1,4 +1,5 @@
 from src.envs import wh_objects as wo
+from src.utils import config as co
 
 wh_vis_map = [
     '++++++++++++++++++++',
@@ -24,10 +25,8 @@ wh_vis_map = [
     '+$$$$$$$$$$$$$$$$$$+'
 ]
 
-PATH_TO_CATALOG = '/Users/mmatskevichus/Desktop/reinforcement_learning/data/categories/yandex-market-leptops.csv'
 
-
-def init_shelf(max_volume = 100, max_weight = 100, silent=True):
+def init_shelf(max_volume=100, max_weight=100, silent=True):
     shelf = wo.Shelf(
         max_volume=max_volume,
         max_weight=max_weight,
@@ -64,5 +63,6 @@ def init_wh_map(vis_map, path_to_catalog=PATH_TO_CATALOG, max_volume=200, max_we
         wo_map.append(wo_row)
     return wo_map
 
+
 if __name__ == '__main__':
-    init_wh_map(vis_map=wh_vis_map, path_to_catalog=PATH_TO_CATALOG, max_volume=100, max_weight=200, silent = True)
+    init_wh_map(vis_map=wh_vis_map, path_to_catalog=co.PATH_TO_CATALOG, max_volume=100, max_weight=200, silent=True)
