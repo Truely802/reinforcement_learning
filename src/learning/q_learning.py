@@ -2,6 +2,11 @@ from IPython.display import clear_output
 from time import sleep
 import numpy as np
 import random
+import os
+import sys
+
+module_dir = os.getcwd()
+sys.path.append(module_dir)
 
 from src.envs.small_env.small_depot import Depot
 
@@ -9,15 +14,15 @@ def print_frames(frames):
     for i, frame in enumerate(frames):
         clear_output(wait=True)
         print(frame['frame'])
-        print(f"Timestep: {i + 1}")
-        print(f"State: {frame['state']}")
-        print(f"Action: {frame['action']}")
-        print(f"Reward: {frame['reward']}")
-        sleep(.1)
+        print('Timestep: ', i + 1)
+        print("State: ", frame['state'])
+        print("Action: ", frame['action'])
+        print("Reward: ", frame['reward'])
+        sleep(.5)
 
 if __name__ == '__main__':
 
-    exp_n = 10
+    exp_n = 1
     res = []
     for exp in range(exp_n):
 
@@ -101,7 +106,7 @@ if __name__ == '__main__':
             total_epochs += epochs
         res.append(total_epochs)
         print_frames(frames)
-        print(f"Stop after {total_epochs} episodes:")
+        print("Stop after {%s} episodes:" %total_epochs)
 
     print(np.mean(res), 'avg. number of steps')
     print(res)

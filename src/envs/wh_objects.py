@@ -1,10 +1,15 @@
+import pandas as pd
+
 class Product(object):
-    def __init__(self, name, weight, volume, manufacturer, price):
+
+    def __init__(self, name, weight, volume, manufacturer, price, n_purchase, category):
         self.name = name
         self.weight = weight
         self.volume = volume
         self.manufacturer = manufacturer
         self.price = price
+        self.n_purchase = n_purchase  #for month
+        self.category = category
 
 
 class Shelf(object):
@@ -156,7 +161,6 @@ class PickPoint(Shelf):
     def inspect(self):
         return 0
 
-
 class SimpleFloor(object):
 
     def __init__(self):
@@ -164,10 +168,50 @@ class SimpleFloor(object):
         self.origin = "floor"
         self.sprite = "."
 
-
 class Wall(object):
 
     def __init__(self):
         self.passable = False
         self.origin = "wall"
         self.sprite = "+"
+
+
+class StorageWorker(object):
+
+    def __init__(self, path_to_catalog):
+       self.catalog = pd.read_csv(path_to_catalog, index_col = 0)
+       self.list_of_product = self.gather_products()
+       self.prod_to_place = list()
+       self.prod_on_shelfs = list()
+
+    def gather_products(self):
+        list_of_products = []
+        for product_n in range(self.catalog.shape[0]):
+            list_of_products.append(Product(name=self.catalog.iloc[product_n]['name'] ,
+                                                 weight= self.catalog.iloc[product_n]['weigth'] ,
+                                                 volume=self.catalog.iloc[product_n]['volume'],
+                                                 manufacturer=None,
+                                                 price=self.catalog.iloc[product_n]['price'],
+                                                 n_purchase=self.catalog.iloc[product_n]['purchase'],
+                                                 category='laptop'))
+        return list_of_products
+
+    def check_shelf(self, max_weigth, max_size):
+        prod_to_place = list()
+        total_weight, total_volume = 0, 0
+        if len(self.list_of_product) !=0:
+            for prod in self.list_of_product:
+                if total_weight <= max_weigth and total_volume <= max_size:
+                    prod_to_place.append(prod)
+                    total_weight += prod.weight
+                    total_volume += prod.volume
+                else:
+                    break
+            self.prod_to_place = prod_to_place
+            self.prod_on_shelfs = self.prod_on_shelfs + prod_to_place
+            self.list_of_product = [x for x in self.list_of_product if x not in self.prod_on_shelfs]
+            return 1
+        else:
+            return 0
+
+
