@@ -1,11 +1,11 @@
 import gym
 import numpy as np
 from gym import spaces
+import os
 
 from src.envs import wh_map as wm
 from src.envs import wh_objects as wo
-
-import os
+from src.models.ConvDQN import create_wh_sreen
 
 
 class WarehouseEnv(gym.Env):
@@ -51,8 +51,8 @@ class WarehouseEnv(gym.Env):
             2: 50,
             1: 0,
             0: -10,
-            10: 500,
-            -1: -1000
+            10: 500, #done
+            -1: -1000 #drop
         }
 
         if num_turns is None:
@@ -86,8 +86,11 @@ class WarehouseEnv(gym.Env):
             acts[i] = act
         return acts
 
-    def step(self, action):
-        action = self.encode[action]
+    def step(self, action_code):
+
+
+        # TODO: 1) step needs to return next_observ (state), reward, done 2) observation - map (0 - floor, 1 - objects)
+        action = self.encode[action_code]
         responce = self.actions[action](self.agent, self.map)
 
         if not isinstance(responce, int):
@@ -108,7 +111,8 @@ class WarehouseEnv(gym.Env):
         else:
             done = False
 
-        return np.array(observation), reward, done, {}
+        screen = self.render()
+        return create_wh_sreen(screen), action_code, reward, done
 
     def reset(self):
         self.map = self.load_map(self.map_sketch, silent=self.silent)
@@ -117,8 +121,10 @@ class WarehouseEnv(gym.Env):
             silent=self.silent
         )
         self.turns_left = self.num_turns
-        observation = [*self.agent.coordinates, self.agent.free_volume, self.agent.available_load]
-        return observation
+
+        #observation = [*self.agent.coordinates, self.agent.free_volume, self.agent.available_load]
+        #return observation
+
 
     def render(self, mode='human'):
         picture = []
@@ -130,8 +136,8 @@ class WarehouseEnv(gym.Env):
                 else:
                     to_print.append(obj.sprite)
             picture.append(''.join(to_print))
-        return '\n'.join(picture)
+        print('\n'.join(picture))
+        return picture
 
     def close(self):
         os.system('clear')
-
