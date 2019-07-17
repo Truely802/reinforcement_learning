@@ -42,26 +42,27 @@ def init_wh_map(vis_map, path_to_catalog=PATH_TO_CATALOG, max_volume=200, max_we
         wo_row = []
         for j, sprite in enumerate(row):
             if sprite == '+':
-                wo_unit = wo.Wall()  # (coordinates=(i, j))
+                wo_unit = wo.Wall()
                 wo_row.append(wo_unit)
             elif sprite == '.':
-                wo_unit = wo.SimpleFloor()  # (coordinates=(i, j))
+                wo_unit = wo.SimpleFloor()
                 wo_row.append(wo_unit)
             elif sprite == '#':
-                wo_unit = init_shelf(silent=silent, max_volume=max_volume, max_weight=max_weight)  # (coordinates=(i, j))
-                response = storage_worker.check_shelf(max_weigth=wo_unit.available_load, max_size=wo_unit.free_volume)
+                wo_unit = init_shelf(silent=silent, max_volume=max_volume, max_weight=max_weight)
+                response = storage_worker.check_shelf(max_weigth=wo_unit.available_load, max_size=wo_unit.free_volume,
+                                                      coordinates=(i, j))
                 if response == 1:
                     for prod in storage_worker.prod_to_place:
                         wo_unit.put_product(prod)
                 wo_row.append(wo_unit)
             elif sprite == '$':
-                wo_unit = wo.PickPoint()  # (coordinates=(i, j))
+                wo_unit = wo.PickPoint()
                 wo_row.append(wo_unit)
             else:
                 print('Wrong sprite!')
                 break
         wo_map.append(wo_row)
-    return wo_map
+    return wo_map, storage_worker.product_scheme
 
 
 if __name__ == '__main__':

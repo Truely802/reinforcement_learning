@@ -17,10 +17,15 @@ def render_map(map_obj, agent_obj):
 
 
 def sim_loop():
-    map_obj = wm.init_wh_map(wm.wh_vis_map, max_weight=200, max_volume=100, path_to_catalog=co.PATH_TO_CATALOG)
+    map_obj, product_scheme = wm.init_wh_map(
+        wm.wh_vis_map,
+        max_weight=200,
+        max_volume=100,
+        path_to_catalog=co.PATH_TO_CATALOG
+    )
     agent_obj = wo.Agent(
         coordinates=(18, 9),
-        path_to_catalog=co.PATH_TO_CATALOG
+        product_scheme=product_scheme
     )
 
     actions = {

@@ -54,8 +54,9 @@ class Shelf(object):
 
 class Agent(object):
 
-    def __init__(self, name='Bill', max_volume=30, max_weight=30, coordinates=(1, 1),
-                 frequency=0.2, path_to_catalog=None, silent=True):
+    def __init__(self, product_scheme: dict, name: str = 'Bill', max_volume: float = 30,
+                 max_weight: float = 30, coordinates: tuple = (1, 1),
+                 frequency: float = 0.2, silent: bool = True):
         self.name = name
         self.coordinates = coordinates
         self.max_volume = max_volume
@@ -67,7 +68,7 @@ class Agent(object):
         self.sprite = "X"
         self.passable = False
         self.silent = silent  # silent mode
-        self.order_list = OrderList(path_to_catalog=path_to_catalog, frequency=frequency)
+        self.order_list = OrderList(product_scheme=product_scheme, frequency=frequency)
 
     def move(self, map_obj, to='u'):
         if to == 'u':
@@ -201,10 +202,33 @@ class Wall(object):
 class StorageWorker(object):
 
     def __init__(self, path_to_catalog):
-        self.catalog = pd.read_csv(path_to_catalog, index_col = 0)
-        self.list_of_product = self._gather_products()
+        self.catalog = pd.read_csv(path_to_catalog, index_col=0)
+        self.list_of_products = self._gather_products()
         self.prod_to_place = list()
         self.prod_on_shelfs = list()
+        self.product_scheme = dict()
+        self._weighted_list, self._max_weight = self._get_weighted_list()
+
+    def _get_weighted_list(self):
+        sum_of_events = np.sum([prod.n_purchase for prod in self.list_of_products])
+        weighted_list = dict()
+        counter = 0
+        for product in self.list_of_products:
+            odd = product.n_purchase / sum_of_events
+            if odd * 1e5 < 1:
+                weight = 1
+            else:
+                weight = int(odd * 1e5)
+            counter += weight
+            weighted_list[counter] = product
+        return weighted_list, counter
+
+    def _sample_product(self):
+        sample_seed = np.random.randint(0, self._max_weight)
+        ordered_weights = sorted(self._weighted_list.keys(), reverse=False)
+        for i, weight in enumerate(ordered_weights):
+            if weight <= sample_seed < ordered_weights[i+1]:
+                return self._weighted_list[weight]
 
     def _gather_products(self):
         list_of_products = []
@@ -220,20 +244,25 @@ class StorageWorker(object):
             ))
         return list_of_products
 
-    def check_shelf(self, max_weigth, max_size):
+    def check_shelf(self, max_weigth, max_size, coordinates):
         prod_to_place = list()
         total_weight, total_volume = 0, 0
-        if len(self.list_of_product) !=0:
-            for prod in self.list_of_product:
+        if len(self.list_of_products) != 0:
+            # for prod in self.list_of_products:
+            while True:
+                prod = self._sample_product()
                 if total_weight <= max_weigth and total_volume <= max_size:
                     prod_to_place.append(prod)
                     total_weight += prod.weight
                     total_volume += prod.volume
+                    coord_list = self.product_scheme.get(prod.name, list())
+                    coord_list.append(coordinates)
+                    self.product_scheme[prod.name] = coord_list
                 else:
                     break
             self.prod_to_place = prod_to_place
-            self.prod_on_shelfs = self.prod_on_shelfs + prod_to_place
-            self.list_of_product = [x for x in self.list_of_product if x not in self.prod_on_shelfs]
+            # self.prod_on_shelfs = self.prod_on_shelfs + prod_to_place
+            # self.list_of_products = [x for x in self.list_of_products if x not in self.prod_on_shelfs]
             return 1
         else:
             return 0
@@ -241,10 +270,10 @@ class StorageWorker(object):
 
 class OrderList(object):
 
-    def __init__(self, path_to_catalog: str, frequency: float = 0.2):
-        self.catalog = pd.read_csv(path_to_catalog, index_col=0)
+    def __init__(self, product_scheme: dict, frequency: float = 0.2):
+        self.product_scheme = product_scheme
         self.list_of_products = self._gather_products()
-        self._weighted_list, self._max_weight = self._get_weighted_list()
+        # self._weighted_list, self._max_weight = self._get_weighted_list()
         self.frequency = frequency
         self.order_list = dict()
 
@@ -274,39 +303,19 @@ class OrderList(object):
         del self.order_list[key]
 
     def _gather_products(self):
-        list_of_products = []
-        for product_n in range(self.catalog.shape[0]):
-            list_of_products.append(Product(
-                name=self.catalog.iloc[product_n]['name'],
-                weight=self.catalog.iloc[product_n]['weigth'],
-                volume=self.catalog.iloc[product_n]['volume'],
-                manufacturer=None,
-                price=self.catalog.iloc[product_n]['price'],
-                n_purchase=self.catalog.iloc[product_n]['purchase'],
-                category='laptop'
-            ))
-        return list_of_products
-
-    def _get_weighted_list(self):
-        sum_of_events = np.sum([prod.n_purchase for prod in self.list_of_products])
-        weighted_list = dict()
-        counter = 0
-        for product in self.list_of_products:
-            odd = product.n_purchase / sum_of_events
-            if odd * 1e5 < 1:
-                weight = 1
-            else:
-                weight = int(odd * 1e5)
-            counter += weight
-            weighted_list[counter] = product
-        return weighted_list, counter
+        return {k: len(v) for (k, v) in self.product_scheme.items()}
 
     def _sample_product(self):
-        sample_seed = np.random.randint(0, self._max_weight)
-        ordered_weights = sorted(self._weighted_list.keys(), reverse=False)
-        for i, weight in enumerate(ordered_weights):
-            if weight <= sample_seed < ordered_weights[i+1]:
-                return self._weighted_list[weight].name
+        if len(self.list_of_products) == 0:
+            return 0
+        indices = np.arange(len(self.list_of_products.keys()))
+        idx = np.random.choice(indices)
+        prod_name, num = [(k, v) for (k, v) in self.list_of_products.items()][idx]
+        if num > 1:
+            self.list_of_products[prod_name] -= 1
+        else:
+            del self.list_of_products[prod_name]
+        return prod_name
 
     def pop(self, key):
         self.order_list[key] -= 1
