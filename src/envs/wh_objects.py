@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 
+
 class Product(object):
 
     def __init__(self, name, weight, volume, manufacturer, price, n_purchase, category):
@@ -150,7 +151,10 @@ class Agent(object):
     def deliver_products(self, map_obj):
         count = 0
         for product_name in self.inventory:
-            for _ in range(self.inventory[product_name]['count']):
+            for _ in range(np.minimum(  # Sometimes agent tries to give more products, than it could be given.
+                    self.inventory[product_name]['count'],
+                    self.order_list.get(product_name, 0)
+            )):
                 response = self.put_product(product_name, map_obj)
                 if response <= 0:
                     return response
@@ -201,13 +205,14 @@ class Wall(object):
 
 class StorageWorker(object):
 
-    def __init__(self, path_to_catalog):
-        self.catalog = pd.read_csv(path_to_catalog, index_col=0)
+    def __init__(self, path_to_catalog, single=False):
+        self.catalog = pd.read_csv(path_to_catalog, index_col=0).fillna(0)
         self.list_of_products = self._gather_products()
         self.prod_to_place = list()
         self.prod_on_shelfs = list()
         self.product_scheme = dict()
         self._weighted_list, self._max_weight = self._get_weighted_list()
+        self.single = single
 
     def _get_weighted_list(self):
         sum_of_events = np.sum([prod.n_purchase for prod in self.list_of_products])
@@ -250,7 +255,17 @@ class StorageWorker(object):
         if len(self.list_of_products) != 0:
             # for prod in self.list_of_products:
             while True:
-                prod = self._sample_product()
+                if self.single:  # TODO: Finish 1-prod init
+                    cnt = 0
+                    while True:
+                        prod = self._sample_product()
+                        cnt += 1
+                        if prod not in self.prod_on_shelfs or cnt > 1e7:
+                            break
+                else:
+                    prod = self._sample_product()
+                    if not prod:  # Sometimes samples None's. Don't know why.
+                        continue
                 if total_weight <= max_weigth and total_volume <= max_size:
                     prod_to_place.append(prod)
                     total_weight += prod.weight
@@ -261,7 +276,7 @@ class StorageWorker(object):
                 else:
                     break
             self.prod_to_place = prod_to_place
-            # self.prod_on_shelfs = self.prod_on_shelfs + prod_to_place
+            self.prod_on_shelfs = self.prod_on_shelfs + prod_to_place
             # self.list_of_products = [x for x in self.list_of_products if x not in self.prod_on_shelfs]
             return 1
         else:
@@ -321,3 +336,6 @@ class OrderList(object):
         self.order_list[key] -= 1
         if self.order_list[key] == 0:
             del self.order_list[key]
+
+    def get(self, key, default):
+        return self.order_list.get(key, default)
