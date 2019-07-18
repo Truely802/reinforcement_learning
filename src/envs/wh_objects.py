@@ -289,7 +289,6 @@ class OrderList(object):
     def __init__(self, product_scheme: dict, frequency: float = -1.0):
         self.product_scheme = product_scheme
         self.list_of_products = self._gather_products()
-        # self._weighted_list, self._max_weight = self._get_weighted_list()
         self.frequency = frequency
         self.order_list = dict()
 
