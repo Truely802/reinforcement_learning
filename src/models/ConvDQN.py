@@ -58,7 +58,7 @@ def train(env, model, num_episodes, buffer_len=20000, batch_size=48, discount_fa
             action = np.argmax(actions, axis=-1)   # get the action
             actions_counter[str(action)] += 1
             action = epsilon_greedy(action, global_step)   # select the action using epsilon greedy policy
-            next_obs, reward, done= env.step(action)   # now perform the action and move to the next state, next_obs, receive reward
+            next_obs, reward, done, _ = env.step(action)   # now perform the action and move to the next state, next_obs, receive reward
 
             exp_buffer.append([obs, action, next_obs, reward, done])
 

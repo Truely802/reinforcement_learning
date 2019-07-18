@@ -67,7 +67,7 @@ class WarehouseEnv(gym.Env):
 
         self.reward_policy = {
             2: 50,
-            1: 0,
+            1: -1,
             0: -10,
             10: 500,  # done
             -1: -1000  # drop
@@ -86,6 +86,7 @@ class WarehouseEnv(gym.Env):
         self.turns_left = self.num_turns
         self.score = 0
         self.encode = self._get_action_code()
+        self.prod_coord = None
 
     def create_wh_screen(self, wh_vis_map):
         wh_vis_map = wh_vis_map.split('\n')
@@ -134,21 +135,25 @@ class WarehouseEnv(gym.Env):
             for _ in range(response // 10):
                 reward += self.reward_policy[10]
         else:
-            reward = response
-        reward -= 10
+            reward = responce
         self.score += reward
         self.turns_left -= 1
+
+        if reward == 500:
+            done=True
+        else:
+            done=False
+
         # observation = []  # self.map2feats(self.map, self.agent)
         # observation += [*self.agent.coordinates, self.agent.free_volume, self.agent.available_load]
-
-        if self.turns_left <= 0 or len(self.agent.order_list) > self.max_order_line:
-            done = True
-        else:
-            done = False
+        # if self.turns_left <= 0 or len(self.agent.order_list) > self.max_order_line:
+        #     done = True
+        # else:
+        #     done = False
 
         info = self.agent.order_list.__str__()
-
         screen = self.render()
+        
         return self.create_wh_screen(screen), reward, done, {'action': action_code, 'order_list': info}
 
     def reset(self):
@@ -167,9 +172,7 @@ class WarehouseEnv(gym.Env):
             frequency=self.frequency,
             product_scheme=self.product_scheme
         )
-        self.turns_left = self.num_turns
-
-        # observation = [*self.agent.coordinates, self.agent.free_volume, self.agent.available_load]
+        
         screen = self.render()
         return self.create_wh_screen(screen)
 
@@ -180,7 +183,8 @@ class WarehouseEnv(gym.Env):
             for j, obj in enumerate(row):
                 if (i, j) == self.agent.coordinates:
                     to_print.append(self.agent.sprite)
-                elif any([(i, j) in self.agent.order_list.product_scheme[prod]
+
+                    elif any([(i, j) in self.agent.order_list.product_scheme[prod]
                           for prod in self.agent.order_list.order_list.keys()]):
                     to_print.append('P')
                 else:
@@ -190,3 +194,5 @@ class WarehouseEnv(gym.Env):
 
     def close(self):
         os.system('clear')
+        
+        

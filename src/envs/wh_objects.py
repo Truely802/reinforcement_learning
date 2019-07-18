@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import random
 
 
 class Product(object):
@@ -229,10 +230,10 @@ class StorageWorker(object):
         return weighted_list, counter
 
     def _sample_product(self):
-        sample_seed = np.random.randint(0, self._max_weight)
         ordered_weights = sorted(self._weighted_list.keys(), reverse=False)
+        sample_seed_l = [np.random.randint(0, self._max_weight) for c in range(len(ordered_weights))]
         for i, weight in enumerate(ordered_weights):
-            if weight <= sample_seed < ordered_weights[i+1]:
+            if weight <= sample_seed_l[i] < ordered_weights[i+1]:
                 return self._weighted_list[weight]
 
     def _gather_products(self):
@@ -285,7 +286,7 @@ class StorageWorker(object):
 
 class OrderList(object):
 
-    def __init__(self, product_scheme: dict, frequency: float = 0.2):
+    def __init__(self, product_scheme: dict, frequency: float = -1.0):
         self.product_scheme = product_scheme
         self.list_of_products = self._gather_products()
         self.frequency = frequency
@@ -304,17 +305,23 @@ class OrderList(object):
         return item in self.order_list
 
     def __call__(self):
-        seed = np.random.uniform()
-        if seed < self.frequency:
+        if len(self.order_list) == 0:
             sample_product = self._sample_product()
             num = self.order_list.get(sample_product, 0)
-            self.order_list[sample_product] = num+1
+            self.order_list[sample_product] = num + 1
+        else:
+            seed = np.random.uniform()
+            if seed < self.frequency:
+                sample_product = self._sample_product()
+                num = self.order_list.get(sample_product, 0)
+                self.order_list[sample_product] = num+1
 
     def __str__(self):
         return ',\n'.join([k + ': ' + str(v) for (k, v) in self.order_list.items()])
 
     def __delitem__(self, key):
         del self.order_list[key]
+
 
     def _gather_products(self):
         return {k: len(v) for (k, v) in self.product_scheme.items()}
