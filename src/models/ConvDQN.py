@@ -7,29 +7,6 @@ from keras.layers.core import Dense, Flatten
 from keras.optimizers import RMSprop
 
 
-def create_wh_sreen(wh_vis_map):
-    length = len(wh_vis_map[0])
-    width = len(wh_vis_map)
-    X = np.zeros((width, length))
-
-    for i, row in enumerate(wh_vis_map):
-        for j, sprite in enumerate(row):
-            if sprite == '.':
-                X[i, j]=0.
-            if sprite == '#':
-                X[i, j]=1.
-            elif sprite == '$':
-                X[i, j]=2.
-            elif sprite == 'X':
-                X[i, j]=3.
-            else:
-                X[i, j]=0.
-
-    #remove borders
-    X = X[1:, 1:-1]
-    return X
-
-
 def dqn_model(input_shape, n_actions):
     model = Sequential()
     model.add(Convolution2D(16, nb_row=3, nb_col=3, input_shape=input_shape, activation='relu'))
@@ -67,10 +44,8 @@ def train(env, model, num_episodes, buffer_len=20000, batch_size=48, discount_fa
     exp_buffer = deque(maxlen=buffer_len)
 
     for i in range(num_episodes):
-        env.reset()
-        screen = env.render()
+        obs = env.reset()
         done = False
-        obs = create_wh_sreen(screen)
         epoch = 0
         episodic_reward = 0
         actions_counter = Counter()
