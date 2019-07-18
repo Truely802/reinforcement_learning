@@ -35,7 +35,7 @@ def init_shelf(max_volume=100, max_weight=100, silent=True):
     return shelf
 
 
-def init_wh_map(vis_map, path_to_catalog=PATH_TO_CATALOG, max_volume=200, max_weight=100,  silent=True):
+def init_wh_map(vis_map, path_to_catalog=co.PATH_TO_CATALOG, max_volume=200, max_weight=100,  silent=True):
     wo_map = []
     storage_worker = wo.StorageWorker(path_to_catalog)
     for i, row in enumerate(vis_map):
@@ -66,4 +66,10 @@ def init_wh_map(vis_map, path_to_catalog=PATH_TO_CATALOG, max_volume=200, max_we
 
 
 if __name__ == '__main__':
-    init_wh_map(vis_map=wh_vis_map, path_to_catalog=co.PATH_TO_CATALOG, max_volume=100, max_weight=200, silent=True)
+    wo_map, prod_scheme = init_wh_map(vis_map=wh_vis_map,
+                                        path_to_catalog=co.PATH_TO_CATALOG,
+                                        max_volume=100,
+                                        max_weight=200,
+                                        silent=True)
+
+    print(prod_scheme)

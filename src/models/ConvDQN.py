@@ -14,16 +14,17 @@ def create_wh_sreen(wh_vis_map):
 
     for i, row in enumerate(wh_vis_map):
         for j, sprite in enumerate(row):
-            if sprite == '.':
-                X[i, j]=0.
-            if sprite == '#':
-                X[i, j]=1.
+            # if sprite == '#' and (i, j) == prod_coord:
+            #     X[i, j]=4.
+            # if sprite == '#' and (i, j) != prod_coord:
+            if sprite == 'P':
+                X[i, j]=4.
             elif sprite == '$':
                 X[i, j]=2.
             elif sprite == 'X':
                 X[i, j]=3.
-            else:
-                X[i, j]=0.
+            elif sprite == '.':
+                X[i, j] = 0.
 
     #remove borders
     X = X[1:, 1:-1]
@@ -83,7 +84,7 @@ def train(env, model, num_episodes, buffer_len=20000, batch_size=48, discount_fa
             action = np.argmax(actions, axis=-1)   # get the action
             actions_counter[str(action)] += 1
             action = epsilon_greedy(action, global_step)   # select the action using epsilon greedy policy
-            next_obs, reward, done= env.step(action)   # now perform the action and move to the next state, next_obs, receive reward
+            next_obs, reward, done, _ = env.step(action)   # now perform the action and move to the next state, next_obs, receive reward
 
             exp_buffer.append([obs, action, next_obs, reward, done])
 
