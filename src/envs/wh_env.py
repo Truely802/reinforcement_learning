@@ -32,7 +32,7 @@ class WarehouseEnv(gym.Env):
             coordinates=(18, 9),
             silent=self.silent,
             max_weight=200,
-            max_volume=100,
+            max_volume=1000,
             frequency=self.frequency,
             product_scheme=self.product_scheme
         )
@@ -62,7 +62,7 @@ class WarehouseEnv(gym.Env):
                 dtype=np.uint32
             )
         else:
-            self.observation_space = None  # TODO: finish observation space for product scheme (?)
+            self.observation_space = None
 
         self.reward_policy = {
             2: 50,
@@ -85,7 +85,6 @@ class WarehouseEnv(gym.Env):
         self.turns_left = self.num_turns
         self.score = 0
         self.encode = self._get_action_code()
-        self.n_actions = len(self.actions)
 
     def create_wh_screen(self, wh_vis_map):
         wh_vis_map = wh_vis_map.split('\n')
@@ -96,22 +95,27 @@ class WarehouseEnv(gym.Env):
         for i, row in enumerate(wh_vis_map):
             for j, sprite in enumerate(row):
                 if sprite == '.':
-                    screen[i, j] = 0
-                if sprite == '#':
-                    screen[i, j] = 1
+                    screen[i, j] = 0.
+                elif sprite == ' ':
+                    screen[i, j] = 0.05
+                elif sprite == '#':
+                    screen[i, j] = 0.2
                 elif sprite == '$':
                     screen[i, j] = 2
                 elif sprite == 'X':
                     screen[i, j] = 3
                 elif sprite == 'P':
-                    screen[i, j] = 4
+                    screen[i, j] = 0.9
+                elif sprite == '-':
+                    screen[i, j] = 0.3
+                elif sprite == '=':
+                    screen[i, j] = 0.35
                 else:
                     screen[i, j] = 0
 
         # remove borders
-        screen = screen[1:, 1:-1]
-        screen = screen.reshape(1, screen.shape[0], screen.shape[1], 1)
-        return screen
+        # screen = screen[1:, 1:-1]
+        return screen*255
 
     def _get_action_code(self):
         acts = dict()
@@ -138,16 +142,26 @@ class WarehouseEnv(gym.Env):
             reward = response
         self.score += reward
         self.turns_left -= 1
+        if self.simplified_state:
+            observation = [*self.agent.coordinates, self.agent.free_volume, self.agent.available_load]
+        else:
+            screen = self.render()
+            observation = self.create_wh_screen(screen)
 
         if reward == 500:
             done = True
         else:
             done = False
 
-        info = self.agent.order_list.__str__()
-        screen = self.render()
+        # if self.turns_left <= 0 or len(self.agent.order_list) > self.max_order_line or \
+        #                 len(self.agent.order_list.list_of_products) == 0:
+        #     done = True
+        # else:
+        #     done = False
 
-        return self.create_wh_screen(screen), reward, done, {'action': action_code, 'order_list': info}
+        info = self.agent.order_list.__str__()
+
+        return observation, reward, done, {'action': action_code, 'order_list': info}
 
     def reset(self):
         self.map, self.product_scheme = self.load_map(
@@ -161,30 +175,57 @@ class WarehouseEnv(gym.Env):
             coordinates=(18, 9),
             silent=self.silent,
             max_weight=200,
-            max_volume=100,
+            max_volume=1000,
             frequency=self.frequency,
             product_scheme=self.product_scheme
         )
 
-        screen = self.render()
-        return self.create_wh_screen(screen)
+        self.turns_left = self.num_turns
 
-    def render(self, mode='human'):  # TODO: finish respriting for shelves with products on product list
+        if self.simplified_state:
+          observation = [*self.agent.coordinates, self.agent.free_volume, self.agent.available_load]
+        else:
+            screen = self.render()
+            observation = self.create_wh_screen(screen)
+
+        return observation
+
+    def _get_status_bar(self, current, maximum, length, sprite, free_space_sprite=' '):
+        bar = [free_space_sprite] * length
+        num_to_fill = int(length * current/maximum)
+        for i in range(num_to_fill):
+            bar[i] = sprite
+        return "".join(bar)
+
+    def render(self, mode='human'):
         picture = []
         for i, row in enumerate(self.map):
             to_print = list()
             for j, obj in enumerate(row):
                 if (i, j) == self.agent.coordinates:
                     to_print.append(self.agent.sprite)
-
                 elif any([(i, j) in self.agent.order_list.product_scheme[prod]
-                              for prod in self.agent.order_list.order_list.keys()]):
+                          for prod in self.agent.order_list.order_list.keys()
+                          if prod not in self.agent.inventory.keys()]):
                     to_print.append('P')
                 else:
                     to_print.append(obj.sprite)
             picture.append(''.join(to_print))
+        picture.append(self._get_status_bar(
+            current=self.agent.available_load,
+            maximum=self.agent.max_weight,
+            length=len(picture[0]),
+            sprite='-',
+            free_space_sprite=' '
+        ))
+        picture.append(self._get_status_bar(
+            current=self.agent.free_volume,
+            maximum=self.agent.max_volume,
+            length=len(picture[0]),
+            sprite='=',
+            free_space_sprite=' '
+        ))
         return '\n'.join(picture)
 
     def close(self):
         os.system('clear')
-
