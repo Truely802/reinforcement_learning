@@ -5,7 +5,6 @@ from gym import spaces
 from src.envs import wh_map as wm
 from src.envs import wh_objects as wo
 from src.utils import config as co
-import PIL
 
 import os
 
@@ -15,7 +14,7 @@ class WarehouseEnv(gym.Env):
         'render.modes': ['human', 'ansi']
     }
 
-    def __init__(self, map_sketch=wm.wh_vis_map, num_turns=None, max_order_line=25, frequency=0.05,
+    def __init__(self, map_sketch=wm.wh_vis_map, num_turns=None, max_order_line=25, frequency=-1,
                  simplified_state=False, silent=True):
         self.map_sketch = map_sketch
         self.silent = silent
@@ -39,14 +38,14 @@ class WarehouseEnv(gym.Env):
         )
 
         self.actions = {
-            'w': lambda x, y: x.move(to='u', map_obj=y),      # 0
-            'a': lambda x, y: x.move(to='l', map_obj=y),      # 1
-            's': lambda x, y: x.move(to='d', map_obj=y),      # 2
-            'd': lambda x, y: x.move(to='r', map_obj=y),      # 3
-            't': lambda x, y: x.take_product(map_obj=y),      # 4
+            'w': lambda x, y: x.move(to='u', map_obj=y),  # 0
+            'a': lambda x, y: x.move(to='l', map_obj=y),  # 1
+            's': lambda x, y: x.move(to='d', map_obj=y),  # 2
+            'd': lambda x, y: x.move(to='r', map_obj=y),  # 3
+            't': lambda x, y: x.take_product(map_obj=y),  # 4
             'g': lambda x, y: x.deliver_products(map_obj=y),  # 5
-            'i': lambda x, y: x.inspect_shelf(map_obj=y),     # 6
-            'r': lambda x, _: x.wait(),                       # 7
+            'i': lambda x, y: x.inspect_shelf(map_obj=y)  # 6
+            # 'r': lambda x, _: x.wait(),  # 7
             # 'q': 'break_loop',                              # N/A
         }
 
@@ -55,8 +54,8 @@ class WarehouseEnv(gym.Env):
             self.observation_space = spaces.Box(
                 low=np.array([1, 1, 0, 0]),
                 high=np.array([
-                    len(self.map[0])-2,
-                    len(self.map)-2,
+                    len(self.map[0]) - 2,
+                    len(self.map) - 2,
                     self.agent.max_weight,
                     self.agent.max_volume
                 ]),
@@ -86,7 +85,7 @@ class WarehouseEnv(gym.Env):
         self.turns_left = self.num_turns
         self.score = 0
         self.encode = self._get_action_code()
-        self.prod_coord = None
+        self.n_actions = len(self.actions)
 
     def create_wh_screen(self, wh_vis_map):
         wh_vis_map = wh_vis_map.split('\n')
@@ -97,21 +96,22 @@ class WarehouseEnv(gym.Env):
         for i, row in enumerate(wh_vis_map):
             for j, sprite in enumerate(row):
                 if sprite == '.':
-                    screen[i, j] = 0.
+                    screen[i, j] = 0
                 if sprite == '#':
-                    screen[i, j] = 0.2
+                    screen[i, j] = 1
                 elif sprite == '$':
-                    screen[i, j] = 0.4
+                    screen[i, j] = 2
                 elif sprite == 'X':
-                    screen[i, j] = 0.6
+                    screen[i, j] = 3
                 elif sprite == 'P':
-                    screen[i, j] = 0.9
+                    screen[i, j] = 4
                 else:
-                    screen[i, j] = 1.
+                    screen[i, j] = 0
 
         # remove borders
         screen = screen[1:, 1:-1]
-        return PIL.Image.fromarray(screen*255)
+        screen = screen.reshape(1, screen.shape[0], screen.shape[1], 1)
+        return screen
 
     def _get_action_code(self):
         acts = dict()
@@ -135,25 +135,18 @@ class WarehouseEnv(gym.Env):
             for _ in range(response // 10):
                 reward += self.reward_policy[10]
         else:
-            reward = responce
+            reward = response
         self.score += reward
         self.turns_left -= 1
 
         if reward == 500:
-            done=True
+            done = True
         else:
-            done=False
-
-        # observation = []  # self.map2feats(self.map, self.agent)
-        # observation += [*self.agent.coordinates, self.agent.free_volume, self.agent.available_load]
-        # if self.turns_left <= 0 or len(self.agent.order_list) > self.max_order_line:
-        #     done = True
-        # else:
-        #     done = False
+            done = False
 
         info = self.agent.order_list.__str__()
         screen = self.render()
-        
+
         return self.create_wh_screen(screen), reward, done, {'action': action_code, 'order_list': info}
 
     def reset(self):
@@ -172,7 +165,7 @@ class WarehouseEnv(gym.Env):
             frequency=self.frequency,
             product_scheme=self.product_scheme
         )
-        
+
         screen = self.render()
         return self.create_wh_screen(screen)
 
@@ -184,8 +177,8 @@ class WarehouseEnv(gym.Env):
                 if (i, j) == self.agent.coordinates:
                     to_print.append(self.agent.sprite)
 
-                    elif any([(i, j) in self.agent.order_list.product_scheme[prod]
-                          for prod in self.agent.order_list.order_list.keys()]):
+                elif any([(i, j) in self.agent.order_list.product_scheme[prod]
+                              for prod in self.agent.order_list.order_list.keys()]):
                     to_print.append('P')
                 else:
                     to_print.append(obj.sprite)
@@ -194,5 +187,4 @@ class WarehouseEnv(gym.Env):
 
     def close(self):
         os.system('clear')
-        
-        
+
