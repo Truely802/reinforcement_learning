@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-
+import copy
 
 class Product(object):
 
@@ -44,7 +44,10 @@ class Shelf(object):
         self.free_volume += self.products[product_name]['product'].volume
         self.available_load += self.products[product_name]['product'].weight
         self.products[product_name]['count'] -= 1
-        return self.products[product_name]['product']
+        product = copy.deepcopy(self.products[product_name]['product'])
+        if self.products[product_name]['count'] == 0:
+            del self.products[product_name]
+        return product
 
     def inspect(self):
         if len(self.products) == 0:
@@ -117,10 +120,12 @@ class Agent(object):
             self.available_load -= self.inventory[product_name]['product'].weight
             self.inventory[product_name]['count'] -= 1
             return -1 * self.inventory[product_name]['product'].price
-        self.free_volume -= self.inventory[product_name]['product'].volume
-        self.available_load -= self.inventory[product_name]['product'].weight
+        self.free_volume += self.inventory[product_name]['product'].volume
+        self.available_load += self.inventory[product_name]['product'].weight
         self.inventory[product_name]['count'] -= 1
         product = self.inventory[product_name]['product']
+        if self.inventory[product_name]['count'] == 0:
+            del self.inventory[product_name]
         response = shelf.put_product(product)
         return response
 
@@ -150,9 +155,11 @@ class Agent(object):
 
     def deliver_products(self, map_obj):
         count = 0
-        for product_name in self.inventory:
+        products = [(p, copy.deepcopy(self.inventory[p]['count'])) for p in self.inventory.keys()]
+        for product_name, count in products:
+
             for _ in range(np.minimum(  # Sometimes agent tries to give more products, than it could be given.
-                    self.inventory[product_name]['count'],
+                    count,
                     self.order_list.get(product_name, 0)
             )):
                 response = self.put_product(product_name, map_obj)
