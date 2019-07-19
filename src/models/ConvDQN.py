@@ -37,7 +37,7 @@ def epsilon_greedy(action, step, n_actions):
 def sample_memories(exp_buffer, batch_size):
     perm_batch = np.random.permutation(len(exp_buffer))[:batch_size]
     mem = np.array(exp_buffer)[perm_batch]
-    return [np.vstack(mem[:,0]), mem[:,1], np.vstack(mem[:,2]), mem[:,3], mem[:,4]] #current obs,  act, next_obs, reward, done
+    return mem[:,0], mem[:,1], mem[:,2], mem[:,3], mem[:,4]#current obs,  act, next_obs, reward, done
 
 
 def train(env, model, input_shape, n_actions,  num_episodes, buffer_len=20000, batch_size=48, discount_factor = 0.97):
@@ -56,9 +56,11 @@ def train(env, model, input_shape, n_actions,  num_episodes, buffer_len=20000, b
         print('Episode %s'%i)
 
         while not done:
-            actions = model.predict(obs)   # feed the game screen and get the Q values for each action
+            actions = model.predict(obs.reshape((1, ) + input_shape))   # feed the game screen and get the Q values for each action
             action = np.argmax(actions, axis=-1)[0]  # get the action
+
             actions_counter[str(action)] += 1
+
             action = epsilon_greedy(action, global_step, n_actions)   # select the action using epsilon greedy policy
             next_obs, reward, done, _ = env.step(action)   #  perform the action and move to the next state, next_obs, receive reward
             exp_buffer.append([obs, action, next_obs, reward, done])
@@ -80,4 +82,3 @@ def train(env, model, input_shape, n_actions,  num_episodes, buffer_len=20000, b
         print('Epoch', epoch, 'Reward', episodic_reward)
     #TODO: 1) save model 2) predict script to check how it works
     return model
-

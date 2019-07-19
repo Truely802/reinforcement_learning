@@ -115,7 +115,7 @@ class WarehouseEnv(gym.Env):
 
         # remove borders
         # screen = screen[1:, 1:-1]
-        return screen*255
+        return np.array(screen*255, dtype=np.uint8)[:, :, np.newaxis]
 
     def _get_action_code(self):
         acts = dict()
