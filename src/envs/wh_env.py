@@ -14,7 +14,7 @@ class WarehouseEnv(gym.Env):
         'render.modes': ['human', 'ansi']
     }
 
-    def __init__(self, map_sketch=wm.wh_vis_map, num_turns=None, max_order_line=25, frequency=0.05,
+    def __init__(self, map_sketch=wm.wh_vis_map, num_turns=None, max_order_line=25, frequency=-1,
                  simplified_state=False, silent=True):
         self.map_sketch = map_sketch
         self.silent = silent
@@ -38,14 +38,14 @@ class WarehouseEnv(gym.Env):
         )
 
         self.actions = {
-            'w': lambda x, y: x.move(to='u', map_obj=y),      # 0
-            'a': lambda x, y: x.move(to='l', map_obj=y),      # 1
-            's': lambda x, y: x.move(to='d', map_obj=y),      # 2
-            'd': lambda x, y: x.move(to='r', map_obj=y),      # 3
-            't': lambda x, y: x.take_product(map_obj=y),      # 4
+            'w': lambda x, y: x.move(to='u', map_obj=y),  # 0
+            'a': lambda x, y: x.move(to='l', map_obj=y),  # 1
+            's': lambda x, y: x.move(to='d', map_obj=y),  # 2
+            'd': lambda x, y: x.move(to='r', map_obj=y),  # 3
+            't': lambda x, y: x.take_product(map_obj=y),  # 4
             'g': lambda x, y: x.deliver_products(map_obj=y),  # 5
-            'i': lambda x, y: x.inspect_shelf(map_obj=y),     # 6
-            'r': lambda x, _: x.wait(),                       # 7
+            'i': lambda x, y: x.inspect_shelf(map_obj=y)  # 6
+            # 'r': lambda x, _: x.wait(),  # 7
             # 'q': 'break_loop',                              # N/A
         }
 
@@ -54,8 +54,8 @@ class WarehouseEnv(gym.Env):
             self.observation_space = spaces.Box(
                 low=np.array([1, 1, 0, 0]),
                 high=np.array([
-                    len(self.map[0])-2,
-                    len(self.map)-2,
+                    len(self.map[0]) - 2,
+                    len(self.map) - 2,
                     self.agent.max_weight,
                     self.agent.max_volume
                 ]),
@@ -101,9 +101,9 @@ class WarehouseEnv(gym.Env):
                 elif sprite == '#':
                     screen[i, j] = 0.2
                 elif sprite == '$':
-                    screen[i, j] = 0.4
+                    screen[i, j] = 2
                 elif sprite == 'X':
-                    screen[i, j] = 0.6
+                    screen[i, j] = 3
                 elif sprite == 'P':
                     screen[i, j] = 0.9
                 elif sprite == '-':
@@ -111,7 +111,7 @@ class WarehouseEnv(gym.Env):
                 elif sprite == '=':
                     screen[i, j] = 0.35
                 else:
-                    screen[i, j] = 1.
+                    screen[i, j] = 0
 
         # remove borders
         # screen = screen[1:, 1:-1]
@@ -153,7 +153,6 @@ class WarehouseEnv(gym.Env):
         else:
             done = False
 
-
         # if self.turns_left <= 0 or len(self.agent.order_list) > self.max_order_line or \
         #                 len(self.agent.order_list.list_of_products) == 0:
         #     done = True
@@ -180,6 +179,7 @@ class WarehouseEnv(gym.Env):
             frequency=self.frequency,
             product_scheme=self.product_scheme
         )
+
         self.turns_left = self.num_turns
 
         if self.simplified_state:
