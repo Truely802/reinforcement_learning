@@ -1,6 +1,5 @@
-import pandas as pd
 import numpy as np
-import copy
+
 
 class Product(object):
 
@@ -44,7 +43,7 @@ class Shelf(object):
         self.free_volume += self.products[product_name]['product'].volume
         self.available_load += self.products[product_name]['product'].weight
         self.products[product_name]['count'] -= 1
-        product = copy.deepcopy(self.products[product_name]['product'])
+        product = self.products[product_name]['product']
         if self.products[product_name]['count'] == 0:
             del self.products[product_name]
         return product
@@ -155,7 +154,7 @@ class Agent(object):
 
     def deliver_products(self, map_obj):
         count = 0
-        products = [(p, copy.deepcopy(self.inventory[p]['count'])) for p in self.inventory.keys()]
+        products = [(p, self.inventory[p]['count']) for p in self.inventory.keys()]
         for product_name, count in products:
 
             for _ in range(np.minimum(  # Sometimes agent tries to give more products, than it could be given.
@@ -212,8 +211,8 @@ class Wall(object):
 
 class StorageWorker(object):
 
-    def __init__(self, path_to_catalog, single=False):
-        self.catalog = pd.read_csv(path_to_catalog, index_col=0).fillna(0)
+    def __init__(self, df_catalog, single=False):
+        self.catalog = df_catalog  # pd.read_csv(path_to_catalog, index_col=0).fillna(0)
         self.list_of_products = self._gather_products()
         self.prod_to_place = list()
         self.prod_on_shelfs = list()

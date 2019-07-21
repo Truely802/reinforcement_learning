@@ -111,7 +111,7 @@ class QTable(object):
 
             # Put each rendered frame into dict for animation
             self.frames.append({
-                'frame': self.env.render(mode='ansi'),
+                'frame': self.env.get_sprite_screen(mode='ansi'),
                 'state': state,
                 'action': action,
                 'reward': reward
