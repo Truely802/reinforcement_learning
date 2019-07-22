@@ -118,7 +118,7 @@ class Agent(object):
             self.free_volume -= self.inventory[product_name]['product'].volume
             self.available_load -= self.inventory[product_name]['product'].weight
             self.inventory[product_name]['count'] -= 1
-            return -1 * self.inventory[product_name]['product'].price
+            return -1  # * self.inventory[product_name]['product'].price
         self.free_volume += self.inventory[product_name]['product'].volume
         self.available_load += self.inventory[product_name]['product'].weight
         product = self.inventory[product_name]['product']
