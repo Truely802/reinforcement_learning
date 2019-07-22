@@ -2,11 +2,6 @@ import gym
 import numpy as np
 import pandas as pd
 from gym import spaces
-import sys
-import os
-
-dir_path = os.getcwd()
-sys.path.append(dir_path)
 
 from src.envs import wh_map as wm
 from src.envs import wh_objects as wo
@@ -21,7 +16,7 @@ class WarehouseEnv(gym.Env):
     }
 
     def __init__(self, map_sketch=wm.wh_vis_map, catalog=None, num_turns=None, max_order_line=25,
-                 agent_max_load=200, agent_max_volume=1000, agent_start_pos=(3, 3),
+                 agent_max_load=200, agent_max_volume=1000, agent_start_pos=(18, 9),
                  shelf_max_load=200, shelf_max_volume=100,
                  frequency: float = 0.05, simplified_state: bool = False,
                  only_one_product: bool = False, win_size=(300, 300), silent: bool = True):
@@ -71,7 +66,7 @@ class WarehouseEnv(gym.Env):
             'd': lambda x, y: x.move(to='r', map_obj=y),      # 3
             't': lambda x, y: x.take_product(map_obj=y),      # 4
             'g': lambda x, y: x.deliver_products(map_obj=y),  # 5
-           # 'i': lambda x, y: x.inspect_shelf(map_obj=y),     # 6
+            # 'i': lambda x, y: x.inspect_shelf(map_obj=y),   # N/A
             # 'r': lambda x, _: x.wait(),                     # N/A
             # 'q': 'break_loop',                              # N/A
         }
@@ -200,19 +195,6 @@ class WarehouseEnv(gym.Env):
         response = self.actions[action](self.agent, self.map)
         reward = self.reward_func(response)
 
-        # if not isinstance(response, int):
-        #     reward = 0
-        #     if not self.silent:
-        #         print(response)
-        # elif response in self.reward_policy:
-        #     reward = self.reward_policy[response]
-        # elif response > 0 and response % 10 == 0:
-        #     reward = 0
-        #     for _ in range(response // 10):
-        #         reward += self.reward_policy[10]
-        # else:
-        #     reward = response
-
         self.score += reward
         self.turns_left -= 1
         if self.simplified_state:
@@ -322,4 +304,3 @@ class WarehouseEnv(gym.Env):
         if self.viewer is not None:
             self.viewer.close()
             self.viewer = None
-
