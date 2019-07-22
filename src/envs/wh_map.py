@@ -35,9 +35,9 @@ def init_shelf(max_volume=100, max_weight=100, silent=True):
     return shelf
 
 
-def init_wh_map(vis_map, path_to_catalog=co.PATH_TO_CATALOG, max_volume=200, max_weight=100,  silent=True):
+def init_wh_map(vis_map, df_catalog, max_volume=200, max_weight=100,  silent=True):
     wo_map = []
-    storage_worker = wo.StorageWorker(path_to_catalog)
+    storage_worker = wo.StorageWorker(df_catalog=df_catalog)
     for i, row in enumerate(vis_map):
         wo_row = []
         for j, sprite in enumerate(row):
@@ -66,8 +66,10 @@ def init_wh_map(vis_map, path_to_catalog=co.PATH_TO_CATALOG, max_volume=200, max
 
 
 if __name__ == '__main__':
+    import pandas as pd
+    df_catalog = pd.read_csv(co.PATH_TO_CATALOG, index_col=0).fillna(0)
     wo_map, prod_scheme = init_wh_map(vis_map=wh_vis_map,
-                                        path_to_catalog=co.PATH_TO_CATALOG,
+                                        df_catalog=df_catalog,
                                         max_volume=100,
                                         max_weight=200,
                                         silent=True)

@@ -3,7 +3,7 @@ from src.models.ConvDQN import train, dqn_model
 import cv2 as cv
 
 if __name__ == '__main__':
-    input_shape = (20, 18, 1)
+    input_shape = (23, 20, 1)
     env = WarehouseEnv()
     q_model = dqn_model(input_shape, n_actions=env.n_actions)
     num_episodes = 100000

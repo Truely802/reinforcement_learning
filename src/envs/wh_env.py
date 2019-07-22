@@ -1,38 +1,60 @@
 import gym
 import numpy as np
+import pandas as pd
 from gym import spaces
 
 from src.envs import wh_map as wm
 from src.envs import wh_objects as wo
-from src.utils import config as co
-
-import os
+import src.utils.config as co
+from IPython.display import clear_output
+from matplotlib import pyplot as plt
 
 
 class WarehouseEnv(gym.Env):
     metadata = {
-        'render.modes': ['human', 'ansi']
+        'render.modes': ['human', 'rgb_array', 'ipynb']
     }
 
-    def __init__(self, map_sketch=wm.wh_vis_map, num_turns=None, max_order_line=25, frequency=-1,
-                 simplified_state=False, silent=True):
+    def __init__(self, map_sketch=wm.wh_vis_map, catalog=None, num_turns=None, max_order_line=25,
+                 agent_max_load=200, agent_max_volume=1000, agent_start_pos=(18, 9),
+                 shelf_max_load=200, shelf_max_volume=100,
+                 frequency: float = 0.05, simplified_state: bool = False,
+                 only_one_product: bool = False, win_size=(300, 300), silent: bool = True):
         self.map_sketch = map_sketch
+        self.only_one_prod = only_one_product
+        self.agent_max_load = agent_max_load
+        self.agent_max_volume = agent_max_volume
+        self.agent_start_pos = agent_start_pos
+        self.shelf_max_weight = shelf_max_load
+        self.shelf_max_volume = shelf_max_volume
+        self.win_size = win_size
         self.silent = silent
-        self.frequency = frequency
+
+        if catalog is None:
+            self.df_catalog = pd.read_csv(co.PATH_TO_CATALOG, index_col=0).fillna(0)
+        else:
+            self.df_catalog = catalog
+
+        if only_one_product:
+            self.frequency = -1
+        else:
+            self.frequency = frequency
+
         self.load_map = wm.init_wh_map
         self.simplified_state = simplified_state
+        self.viewer = None
         self.map, self.product_scheme = self.load_map(
             self.map_sketch,
-            max_weight=200,
-            max_volume=100,
-            path_to_catalog=co.PATH_TO_CATALOG,
+            max_weight=self.shelf_max_weight,
+            max_volume=self.shelf_max_volume,
+            df_catalog=self.df_catalog,
             silent=self.silent
         )
         self.agent = wo.Agent(
-            coordinates=(18, 9),
+            coordinates=self.agent_start_pos,
             silent=self.silent,
-            max_weight=200,
-            max_volume=1000,
+            max_weight=self.agent_max_load,
+            max_volume=self.agent_max_volume,
             frequency=self.frequency,
             product_scheme=self.product_scheme
         )
@@ -113,9 +135,7 @@ class WarehouseEnv(gym.Env):
                 else:
                     screen[i, j] = 1.
 
-        # remove borders
-        # screen = screen[1:, 1:-1]
-        return screen*255
+        return np.array(screen*255, dtype=np.uint8)[:, :, np.newaxis]
 
     def _get_action_code(self):
         acts = dict()
@@ -131,7 +151,8 @@ class WarehouseEnv(gym.Env):
 
         if not isinstance(response, int):
             reward = 0
-            if not self.silent: print(response)
+            if not self.silent:
+                print(response)
         elif response in self.reward_policy:
             reward = self.reward_policy[response]
         elif response > 0 and response % 10 == 0:
@@ -145,19 +166,17 @@ class WarehouseEnv(gym.Env):
         if self.simplified_state:
             observation = [*self.agent.coordinates, self.agent.free_volume, self.agent.available_load]
         else:
-            screen = self.render()
+            screen = self.get_sprite_screen()
             observation = self.create_wh_screen(screen)
 
-        if reward == 500:
+        if self.turns_left <= 0 or len(self.agent.order_list) > self.max_order_line or \
+                        len(self.agent.order_list.list_of_products) == 0:
             done = True
         else:
             done = False
 
-        # if self.turns_left <= 0 or len(self.agent.order_list) > self.max_order_line or \
-        #                 len(self.agent.order_list.list_of_products) == 0:
-        #     done = True
-        # else:
-        #     done = False
+        if self.only_one_prod and reward == 500:
+            done = True
 
         info = self.agent.order_list.__str__()
 
@@ -166,26 +185,27 @@ class WarehouseEnv(gym.Env):
     def reset(self):
         self.map, self.product_scheme = self.load_map(
             self.map_sketch,
-            max_weight=200,
-            max_volume=100,
-            path_to_catalog=co.PATH_TO_CATALOG,
+            max_weight=self.shelf_max_weight,
+            max_volume=self.shelf_max_volume,
+            df_catalog=self.df_catalog,
             silent=self.silent
         )
         self.agent = wo.Agent(
-            coordinates=(18, 9),
+            coordinates=self.agent_start_pos,
             silent=self.silent,
-            max_weight=200,
-            max_volume=1000,
+            max_weight=self.agent_max_load,
+            max_volume=self.agent_max_volume,
             frequency=self.frequency,
             product_scheme=self.product_scheme
         )
 
+        self.score = 0
         self.turns_left = self.num_turns
 
         if self.simplified_state:
-          observation = [*self.agent.coordinates, self.agent.free_volume, self.agent.available_load]
+            observation = [*self.agent.coordinates, self.agent.free_volume, self.agent.available_load]
         else:
-            screen = self.render()
+            screen = self.get_sprite_screen()
             observation = self.create_wh_screen(screen)
 
         return observation
@@ -197,7 +217,7 @@ class WarehouseEnv(gym.Env):
             bar[i] = sprite
         return "".join(bar)
 
-    def render(self, mode='human'):
+    def get_sprite_screen(self,):
         picture = []
         for i, row in enumerate(self.map):
             to_print = list()
@@ -227,5 +247,26 @@ class WarehouseEnv(gym.Env):
         ))
         return '\n'.join(picture)
 
+    def render(self, mode='human'):
+        img = self.create_wh_screen(self.get_sprite_screen())
+        if mode == 'rgb_array':
+            return img
+        elif mode == 'human':
+            import cv2
+            from gym.envs.classic_control import rendering
+            img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+            img = cv2.resize(img, dsize=self.win_size, interpolation=cv2.INTER_NEAREST)
+            if self.viewer is None:
+                self.viewer = rendering.SimpleImageViewer()
+            self.viewer.imshow(img)
+            return self.viewer.isopen
+        elif mode == 'ipynb':
+            clear_output(wait=True)
+            plt.imshow(img.reshape(img.shape[0], img.shape[1]))
+            plt.show()
+
     def close(self):
-        os.system('clear')
+        clear_output(wait=True)
+        if self.viewer is not None:
+            self.viewer.close()
+            self.viewer = None
