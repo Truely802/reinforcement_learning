@@ -115,8 +115,8 @@ class Agent(object):
             return 0
         if shelf == 0:
             if not self.silent: print('You\'ve broken', self.inventory[product_name]['product'].name)
-            self.free_volume -= self.inventory[product_name]['product'].volume
-            self.available_load -= self.inventory[product_name]['product'].weight
+            self.free_volume += self.inventory[product_name]['product'].volume
+            self.available_load += self.inventory[product_name]['product'].weight
             self.inventory[product_name]['count'] -= 1
             return -1  # * self.inventory[product_name]['product'].price
         self.free_volume += self.inventory[product_name]['product'].volume
