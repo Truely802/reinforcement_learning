@@ -87,9 +87,9 @@ class WarehouseEnv(gym.Env):
             self.observation_space = None
 
         self.reward_policy = {
-            2: 50,
-            1: -1,
-            0: -10,
+            2: 10,
+            1: -10,
+            0: -20,
             10: 500,  # done
             -1: -1000  # drop
         }
