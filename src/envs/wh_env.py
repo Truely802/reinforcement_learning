@@ -107,6 +107,7 @@ class WarehouseEnv(gym.Env):
         self.turns_left = self.num_turns
         self.score = 0
         self.encode = self._get_action_code()
+        self.wh_shape = self.create_wh_screen(self.get_sprite_screen()).shape
 
     def return_manhattan_dist(self, if_prod):
         if  if_prod:
@@ -178,7 +179,6 @@ class WarehouseEnv(gym.Env):
                 else:
                     screen[i, j] = 1.
         screen = np.array(screen*255, dtype=np.uint8)[:, :, np.newaxis]
-        self.wh_shape = screen.shape
         return screen
 
     def _get_action_code(self):
