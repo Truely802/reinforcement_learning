@@ -2,6 +2,11 @@ import gym
 import numpy as np
 import pandas as pd
 from gym import spaces
+import sys
+import os
+
+dir_path = os.getcwd()
+sys.path.append(dir_path)
 
 from src.envs import wh_map as wm
 from src.envs import wh_objects as wo
@@ -16,7 +21,7 @@ class WarehouseEnv(gym.Env):
     }
 
     def __init__(self, map_sketch=wm.wh_vis_map, catalog=None, num_turns=None, max_order_line=25,
-                 agent_max_load=200, agent_max_volume=1000, agent_start_pos=(18, 9),
+                 agent_max_load=200, agent_max_volume=1000, agent_start_pos=(3, 3),
                  shelf_max_load=200, shelf_max_volume=100,
                  frequency: float = 0.05, simplified_state: bool = False,
                  only_one_product: bool = False, win_size=(300, 300), silent: bool = True):
@@ -66,7 +71,7 @@ class WarehouseEnv(gym.Env):
             'd': lambda x, y: x.move(to='r', map_obj=y),      # 3
             't': lambda x, y: x.take_product(map_obj=y),      # 4
             'g': lambda x, y: x.deliver_products(map_obj=y),  # 5
-            'i': lambda x, y: x.inspect_shelf(map_obj=y),     # 6
+           # 'i': lambda x, y: x.inspect_shelf(map_obj=y),     # 6
             # 'r': lambda x, _: x.wait(),                     # N/A
             # 'q': 'break_loop',                              # N/A
         }
@@ -88,7 +93,7 @@ class WarehouseEnv(gym.Env):
 
         self.reward_policy = {
             2: 50,
-            1: -1,
+            # 1: -1,
             0: -10,
             10: 500,  # done
             -1: -1000  # drop
@@ -107,6 +112,49 @@ class WarehouseEnv(gym.Env):
         self.turns_left = self.num_turns
         self.score = 0
         self.encode = self._get_action_code()
+
+    def return_manhattan_dist(self, if_prod):
+        if  if_prod:
+            dist = abs(self.agent.coordinates[0] - len(self.map_sketch[0]))
+            return dist
+        else:
+            prod_dist = {}
+            prod_coord = [self.agent.order_list.product_scheme[p] for p in self.agent.order_list.order_list.keys()][0]
+            for c in prod_coord:
+                prod_dist[c] = abs(self.agent.coordinates[0] - c[0]) + abs(self.agent.coordinates[1] - c[1])
+            return prod_dist
+
+    def calculate_reward(self, dist):
+        rewards = [1 - (dist[prod_c] / self.max_dist[prod_c]) ** 0.4 for prod_c in self.max_dist.keys()]
+        return min(rewards)
+
+    def reward_func(self, response):
+        if not isinstance(response, int):
+            reward = 0
+            if not self.silent:
+                print(response)
+        elif response in self.reward_policy:
+            reward = self.reward_policy[response]
+            if reward == 50:
+                self.pickup_point = self.agent.coordinates
+
+        elif response > 0 and response % 10 == 0:
+            reward = 0
+            for _ in range(response // 10):
+                reward += self.reward_policy[10]
+
+        elif response == 1:
+
+            if self.agent.inventory:
+                current_dist = self.return_manhattan_dist(if_prod= True)
+                reward = 1 - current_dist / abs(self.pickup_point[0] - len(self.map_sketch[0]))
+
+            else:
+                current_dist = self.return_manhattan_dist(if_prod=False)
+                reward = self.calculate_reward(current_dist)
+        else:
+            reward = response
+        return reward
 
     def create_wh_screen(self, wh_vis_map):
         wh_vis_map = wh_vis_map.split('\n')
@@ -134,8 +182,9 @@ class WarehouseEnv(gym.Env):
                     screen[i, j] = 0.35
                 else:
                     screen[i, j] = 1.
-
-        return np.array(screen*255, dtype=np.uint8)[:, :, np.newaxis]
+        screen = np.array(screen*255, dtype=np.uint8)[:, :, np.newaxis]
+        self.wh_shape = screen.shape
+        return screen
 
     def _get_action_code(self):
         acts = dict()
@@ -146,21 +195,24 @@ class WarehouseEnv(gym.Env):
 
     def step(self, action_code):
         self.agent.order_list()
+        self.max_dist = self.return_manhattan_dist(if_prod=False)
         action = self.encode[action_code]
         response = self.actions[action](self.agent, self.map)
+        reward = self.reward_func(response)
 
-        if not isinstance(response, int):
-            reward = 0
-            if not self.silent:
-                print(response)
-        elif response in self.reward_policy:
-            reward = self.reward_policy[response]
-        elif response > 0 and response % 10 == 0:
-            reward = 0
-            for _ in range(response // 10):
-                reward += self.reward_policy[10]
-        else:
-            reward = response
+        # if not isinstance(response, int):
+        #     reward = 0
+        #     if not self.silent:
+        #         print(response)
+        # elif response in self.reward_policy:
+        #     reward = self.reward_policy[response]
+        # elif response > 0 and response % 10 == 0:
+        #     reward = 0
+        #     for _ in range(response // 10):
+        #         reward += self.reward_policy[10]
+        # else:
+        #     reward = response
+
         self.score += reward
         self.turns_left -= 1
         if self.simplified_state:
@@ -270,3 +322,4 @@ class WarehouseEnv(gym.Env):
         if self.viewer is not None:
             self.viewer.close()
             self.viewer = None
+
